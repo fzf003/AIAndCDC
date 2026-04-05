@@ -52,7 +52,7 @@ public class ProductHandler : ICdcHandler
             var before = message.Before.Value;
             _logger.LogInformation("  Before: Sku={Sku}, Price={Price}, Name={Name}, CustomerId={CustomerId}",
                 before.GetProperty("Sku").GetString(),
-                before.GetProperty("Price").GetDecimal(),
+                before.GetProperty("Price").GetString(),
                 before.TryGetProperty("ProductName", out var bn) ? bn.GetString() : null,
                 before.GetProperty("CustomerId").GetInt32());
         }
@@ -63,7 +63,7 @@ public class ProductHandler : ICdcHandler
             var after = message.After.Value;
             _logger.LogInformation("  After: Sku={Sku}, Price={Price}, Name={Name}, CustomerId={CustomerId}",
                 after.GetProperty("Sku").GetString(),
-                after.GetProperty("Price").GetDecimal(),
+                after.GetProperty("Price").GetString(),
                 after.TryGetProperty("ProductName", out var an) ? an.GetString() : null,
                 after.GetProperty("CustomerId").GetInt32());
         }
