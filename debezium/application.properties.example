@@ -1,0 +1,65 @@
+# ======================
+# SQL Server CDC 配置
+# ======================
+debezium.source.connector.class=io.debezium.connector.sqlserver.SqlServerConnector
+
+debezium.source.database.hostname=${SQL_SERVER_HOST}
+debezium.source.database.port=1433
+debezium.source.database.user=${DATABASE_USER}
+debezium.source.database.password=${DATABASE_PASSWORD}
+
+debezium.source.database.names=${DATABASE_NAME}
+debezium.source.database.server.name=product
+debezium.source.topic.prefix=product
+debezium.source.database.encrypt=true
+debezium.source.database.trustServerCertificate=true
+
+# 监听表（多个表用逗号分隔，如 dbo.Product,dbo.Order）
+debezium.source.table.include.list=dbo.Product
+
+# ======================
+# Snapshot 模式 (完成快照后继续流式传输)
+# ======================
+debezium.source.snapshot.mode=initial
+debezium.source.snapshot.locking.mode=none
+
+# ======================
+# Schema History（持久化）
+# ======================
+debezium.source.schema.history.internal=io.debezium.storage.file.history.FileSchemaHistory
+debezium.source.schema.history.internal.file.filename=/debezium/data/schema_history.dat
+
+# ======================
+# Offset（持久化）
+# ======================
+debezium.source.offset.storage.file.filename=/debezium/data/offsets.dat
+debezium.source.offset.flush.interval.ms=1000
+
+# ======================
+# Sink 配置（选择一种启用）
+# ======================
+
+# HTTP Webhook
+#debezium.sink.type=http
+#debezium.sink.http.url=http://host.docker.internal:8889/cdc
+
+# Redis Sink（推荐生产环境）
+debezium.sink.type=redis
+debezium.sink.redis.address=${REDIS_HOST}:${REDIS_PORT}
+debezium.sink.redis.topic.prefix=cdc
+
+# ======================
+# JSON 输出 (不带 schema)
+# ======================
+debezium.format.value=json
+debezium.format.key=json
+debezium.format.value.schemas.enable=false
+debezium.format.key.schemas.enable=false
+
+debezium.format.value.json.decimal.format=NUMERIC
+
+# ======================
+# 无主键表处理
+# ======================
+debezium.source.key.converter=org.apache.kafka.connect.json.JsonConverter
+debezium.source.key.converter.schemas.enable=false

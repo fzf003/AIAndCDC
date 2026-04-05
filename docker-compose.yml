@@ -1,0 +1,42 @@
+services:
+  nats:
+    image: nats:2.10
+    container_name: nats
+    command: ["-js"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  http-server:
+    image: python:3.11-slim
+    container_name: http-server
+    volumes:
+      - ./http_server.py:/app/http_server.py
+    working_dir: /app
+    command: ["python", "-u", "http_server.py"]
+    ports:
+      - "8888:8888"
+
+  nats-cli:
+    image: natsio/nats-box:latest
+    container_name: nats-cli
+    depends_on:
+      - nats
+    entrypoint: ["sleep", "infinity"]
+    profiles:
+      - tools
+
+  debezium:
+    image: quay.io/debezium/server:2.7.4.Final
+    container_name: debezium
+    restart: unless-stopped
+    volumes:
+      - ./debezium/application.properties:/debezium/conf/application.properties:ro
+      - ./debezium/data:/debezium/data
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:${SQL_SERVER_HOST}"
+    depends_on:
+      - nats
+      - http-server

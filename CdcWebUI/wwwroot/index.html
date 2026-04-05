@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>CDC Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;background:#f5f5f5}
+.header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:20px}
+.header h1{font-size:24px;margin-bottom:10px}
+.stats{display:flex;gap:20px;flex-wrap:wrap}
+.stat-card{background:rgba(255,255,255,.2);padding:15px 25px;border-radius:8px}
+.stat-value{font-size:28px;font-weight:700}
+.stat-label{font-size:12px;opacity:.8}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.events{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.event{border-bottom:1px solid #eee;padding:15px;display:flex;gap:15px}
+.event-op{width:80px;text-align:center;padding:8px;border-radius:6px;font-weight:700;font-size:12px}
+.op-c{background:#d4edda;color:#155724}
+.op-u{background:#fff3cd;color:#856404}
+.op-d{background:#f8d7da;color:#721c24}
+.op-r{background:#d1ecf1;color:#0c5460}
+.event-content{flex:1}
+.event-meta{font-size:12px;color:#666;margin-bottom:8px}
+.event-data{background:#f8f9fa;padding:10px;border-radius:4px;font-family:monospace;font-size:12px;overflow-x:auto}
+.loading{text-align:center;padding:40px;color:#666}
+.refresh{position:fixed;bottom:20px;right:20px;background:#667eea;color:#fff;border:none;padding:12px 24px;border-radius:24px;cursor:pointer}
+</style></head><body>
+<div class="header"><h1>📊 CDC Monitor</h1><div class="stats">
+<div class="stat-card"><div class="stat-value" id="total">-</div><div class="stat-label">Total</div></div>
+<div class="stat-card"><div class="stat-value" id="lastMinute">-</div><div class="stat-label">Last Minute</div></div>
+<div class="stat-card"><div class="stat-value" id="lastHour">-</div><div class="stat-label">Last Hour</div></div>
+</div></div>
+<div class="container"><div class="events" id="events"><div class="loading">Loading...</div></div></div>
+<button class="refresh" onclick="load()">🔄 Refresh</button>
+<script>
+async function load(){
+const[e,s]=await Promise.all([fetch('/api/events'),fetch('/api/stats')].map(f=>f().then(r=>r.json())));
+document.getElementById('total').textContent=s.total;
+document.getElementById('lastMinute').textContent=s.lastMinute;
+document.getElementById('lastHour').textContent=s.lastHour;
+const el=document.getElementById('events');
+if(!e.length){el.innerHTML='<div class="loading">No events</div>';return;}
+el.innerHTML=e.map(x=>'<div class="event"><div class="event-op op-'+x.op+'">'+(x.op||'').toUpperCase()+'</div><div class="event-content"><div class="event-meta"><b>'+x.table+'</b> • '+new Date(x.timestamp).toLocaleTimeString()+'</div><div class="event-data">'+x.data+'</div></div></div>').join('');
+}
+load();setInterval(load,3000);
+</script></body></html>

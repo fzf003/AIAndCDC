@@ -1,0 +1,26 @@
+# ===== 敏感配置（包含真实 IP/密码）=====
+debezium/application.properties
+debezium/application-redis.properties
+CdcRedisConsumer/appsettings.json
+.env
+
+# ===== 构建产物 =====
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+
+# ===== IDE =====
+.vs/
+.vscode/
+*.user
+*.suo
+
+# ===== Debezium 数据（offset/schema history）=====
+debezium/data/
+
+# ===== 备份文件 =====
+*.bak
+*.bak-*
+CdcHttpServer/cdc_events.log
