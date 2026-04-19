@@ -24,3 +24,5 @@ debezium/data/
 *.bak
 *.bak-*
 CdcHttpServer/cdc_events.log
+CdcWebUIClient/node_modules
+CdcWebUIClient/.vite/
