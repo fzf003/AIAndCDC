@@ -1,42 +1,48 @@
-/**
- * CDC 事件操作类型
- */
-export type Operation = 'CREATE' | 'UPDATE' | 'DELETE' | 'READ';
+export type Operation = 'c' | 'u' | 'd' | 'r';
 
-/**
- * CDC 事件数据结构
- */
 export interface CdcEvent {
-  /** 事件时间戳 */
-  timestamp: string;
-  /** 数据库名称 */
-  database: string;
-  /** 表名 */
-  table: string;
-  /** 操作类型 */
+  id: string;
+  sourceSchema: string;
+  sourceTable: string;
   op: Operation;
-  /** 事件数据（JSON 字符串） */
-  data: string;
+  before: unknown | null;
+  after: unknown | null;
+  tsMs: number;
+  receivedAt: string;
+  rawJson: string;
 }
 
-/**
- * 统计信息响应
- */
-export interface Stats {
-  /** 总事件数 */
+export interface PagedResult<T> {
+  items: T[];
   total: number;
-  /** 最近1分钟事件数 */
+  page: number;
+  size: number;
+}
+
+export interface Stats {
+  total: number;
+  totalEvents: number;
+  byOp: Record<string, number>;
   lastMinute: number;
-  /** 最近1小时事件数 */
   lastHour: number;
 }
 
-/**
- * 筛选条件
- */
 export interface FilterOptions {
-  /** 操作类型筛选 */
   operation?: Operation | 'ALL';
-  /** 表名搜索关键词 */
   tableSearch?: string;
+}
+
+export const operationLabels: Record<Operation, string> = {
+  c: '新增',
+  u: '更新',
+  d: '删除',
+  r: '读取',
+};
+
+export function formatOperation(op: string): string {
+  return operationLabels[op as Operation] ?? op.toUpperCase();
+}
+
+export function getEventPayload(event: CdcEvent): unknown {
+  return event.after ?? event.before ?? {};
 }

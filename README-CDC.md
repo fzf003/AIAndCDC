@@ -65,7 +65,7 @@
 ### 1. 启动 Debezium
 
 ```powershell
-cd E:\github\ProActor\demo\demo\CdcService
+cd <repo-root>
 docker compose up -d debezium
 ```
 
@@ -85,7 +85,7 @@ Connected metrics set to 'true'
 
 ```powershell
 cd CdcHttpServer
-& 'C:\Program Files\dotnet\dotnet.exe' run
+dotnet run
 ```
 
 ---
@@ -184,9 +184,9 @@ app.Run();
 ### 运行
 
 ```powershell
-# 启动消费者
+# 启动服务
 cd CdcHttpServer
-& 'C:\Program Files\dotnet\dotnet.exe' run
+dotnet run
 
 # 测试 SQL
 INSERT INTO dbo.Product (Sku, Price, ProductName) 
@@ -718,7 +718,7 @@ while (true)
 ### 项目结构
 
 ```
-E:\github\ProActor\demo\demo\CdcService\
+<repo-root>\
 ├── CdcHttpServer/           # HTTP 消费者
 │   ├── Program.cs
 │   ├── CdcHttpServer.csproj
@@ -735,15 +735,15 @@ E:\github\ProActor\demo\demo\CdcService\
 ```powershell
 # HTTP
 cd CdcHttpServer
-& 'C:\Program Files\dotnet\dotnet.exe' run
+dotnet run
 
 # Redis（需要 StackExchange.Redis 包）
 cd CdcRedisConsumer
-& 'C:\Program Files\dotnet\dotnet.exe' run
+dotnet run
 
 # NATS（需要 NATS.Client 包）
 cd CdcNatsConsumer
-& 'C:\Program Files\dotnet\dotnet.exe' run
+dotnet run
 ```
 
 ---

@@ -32,9 +32,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { NCard, NSelect, NInput, NButton, NSpace, NIcon } from 'naive-ui';
-import { SearchOutline, CloseCircleOutline } from '@vicons/ionicons5';
-import type { Operation, FilterOptions } from '../types/cdc';
+import { NButton, NCard, NIcon, NInput, NSelect, NSpace } from 'naive-ui';
+import { CloseCircleOutline, SearchOutline } from '@vicons/ionicons5';
+import type { FilterOptions, Operation } from '../types/cdc';
 
 interface Props {
   filters: FilterOptions;
@@ -51,16 +51,20 @@ const localSearch = ref(props.filters.tableSearch || '');
 
 const operationOptions = [
   { label: '全部', value: 'ALL' },
-  { label: '🟢 创建', value: 'CREATE' },
-  { label: '🟡 更新', value: 'UPDATE' },
-  { label: '🔴 删除', value: 'DELETE' },
-  { label: '🔵 读取', value: 'READ' },
+  { label: '新增', value: 'c' },
+  { label: '更新', value: 'u' },
+  { label: '删除', value: 'd' },
+  { label: '读取', value: 'r' },
 ];
 
-watch(() => props.filters, (newFilters) => {
-  localOperation.value = newFilters.operation || 'ALL';
-  localSearch.value = newFilters.tableSearch || '';
-}, { deep: true });
+watch(
+  () => props.filters,
+  (newFilters) => {
+    localOperation.value = newFilters.operation || 'ALL';
+    localSearch.value = newFilters.tableSearch || '';
+  },
+  { deep: true },
+);
 
 function handleOperationChange(value: Operation | 'ALL' | null) {
   emit('update:filters', {

@@ -14,11 +14,8 @@ public class Program
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) =>
             {
-                // 注册处理器
                 services.AddSingleton<ICdcHandler, ProductHandler>();
                 services.AddSingleton<ICdcHandler, DefaultHandler>();
-
-                // 注册消费者服务
                 services.AddHostedService<RedisStreamConsumer>();
             })
             .ConfigureLogging(logging =>

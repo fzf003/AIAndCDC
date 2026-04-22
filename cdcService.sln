@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CdcRedisConsumer", "CdcRedi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CdcHttpServer", "CdcHttpServer\CdcHttpServer.csproj", "{02CEA5DC-6327-4F82-A965-D7CBD9559C0C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIAndCDC.Tests", "AIAndCDC.Tests\AIAndCDC.Tests.csproj", "{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{02CEA5DC-6327-4F82-A965-D7CBD9559C0C}.Release|x64.Build.0 = Release|Any CPU
 		{02CEA5DC-6327-4F82-A965-D7CBD9559C0C}.Release|x86.ActiveCfg = Release|Any CPU
 		{02CEA5DC-6327-4F82-A965-D7CBD9559C0C}.Release|x86.Build.0 = Release|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Debug|x64.Build.0 = Debug|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Debug|x86.Build.0 = Debug|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Release|x64.ActiveCfg = Release|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Release|x64.Build.0 = Release|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Release|x86.ActiveCfg = Release|Any CPU
+		{D9BB536B-5D0D-4C52-955A-E20C4CB5CBA5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

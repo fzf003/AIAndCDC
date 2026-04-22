@@ -1,8 +1,9 @@
-# ===== 敏感配置（包含真实 IP/密码）=====
+# ===== 敏感配置（包含真实地址、账号或密码）=====
 debezium/application.properties
 debezium/application-redis.properties
 CdcRedisConsumer/appsettings.json
 .env
+CdcRedisConsumer/.env
 
 # ===== 构建产物 =====
 bin/
@@ -10,6 +11,13 @@ obj/
 *.exe
 *.dll
 *.pdb
+.dotnet/
+
+# ===== 测试产物 =====
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
 
 # ===== IDE =====
 .vs/
@@ -17,12 +25,16 @@ obj/
 *.user
 *.suo
 
-# ===== Debezium 数据（offset/schema history）=====
+# ===== Debezium 数据（offset / schema history）=====
 debezium/data/
 
-# ===== 备份文件 =====
+# ===== 临时文件与备份 =====
 *.bak
 *.bak-*
+*.tmp
+.tmp-*.log
 CdcHttpServer/cdc_events.log
-CdcWebUIClient/node_modules
+
+# ===== 前端依赖与缓存 =====
+CdcWebUIClient/node_modules/
 CdcWebUIClient/.vite/

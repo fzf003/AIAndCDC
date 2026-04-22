@@ -1,5 +1,5 @@
 <template>
-  <n-card title="📊 统计信息" class="stats-panel">
+  <n-card title="统计信息" class="stats-panel">
     <n-grid :cols="3" :x-gap="12">
       <n-grid-item>
         <n-statistic label="总事件数" :value="stats.total">
@@ -9,14 +9,14 @@
         </n-statistic>
       </n-grid-item>
       <n-grid-item>
-        <n-statistic label="最近1分钟" :value="stats.lastMinute">
+        <n-statistic label="最近 1 分钟" :value="stats.lastMinute">
           <template #prefix>
             <n-icon :component="TimeOutline" />
           </template>
         </n-statistic>
       </n-grid-item>
       <n-grid-item>
-        <n-statistic label="最近1小时" :value="stats.lastHour">
+        <n-statistic label="最近 1 小时" :value="stats.lastHour">
           <template #prefix>
             <n-icon :component="HourglassOutline" />
           </template>
@@ -27,8 +27,8 @@
 </template>
 
 <script setup lang="ts">
-import { NCard, NStatistic, NGrid, NGridItem, NIcon } from 'naive-ui';
-import { AppsOutline, TimeOutline, HourglassOutline } from '@vicons/ionicons5';
+import { NCard, NGrid, NGridItem, NIcon, NStatistic } from 'naive-ui';
+import { AppsOutline, HourglassOutline, TimeOutline } from '@vicons/ionicons5';
 import type { Stats } from '../types/cdc';
 
 interface Props {

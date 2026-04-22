@@ -1,47 +1,63 @@
-# CDC HTTP Server
+# CdcHttpServer
 
-Debezium CDC 事件接收器 - 通过 HTTP Webhook 接收数据库变更事件。
+CDC HTTP 接收与查询服务。
 
-## 运行
+## 项目定位
+
+- 推荐主线：`CdcHttpServer + CdcWebUIClient`
+- 当前职责：
+  - 接收 Debezium 通过 HTTP 推送的 CDC 事件
+  - 在内存中维护最近事件
+  - 提供查询接口给前端使用
+- 不再承担 Redis Stream 消费职责，相关工作已收敛到 `CdcRedisConsumer`
+
+## 启动
 
 ```powershell
-cd E:\github\ProActor\demo\demo\CdcService\CdcHttpServer
-& 'C:\Program Files\dotnet\dotnet.exe' run
+cd CdcHttpServer
+dotnet run
 ```
 
-## 监听端点
+默认监听地址：
 
-- **URL**: `http://*:8889/cdc`
-- **方法**: POST
-- **Content-Type**: application/json
+- `http://localhost:8889`
 
-## 日志文件
+## 配置
 
-运行时会在当前目录生成 `cdc_events.log`，记录所有接收到的 CDC 事件。
+默认配置位于：
+
+- `appsettings.json`
+- `appsettings.Development.json`
+
+当前支持的关键配置：
+
+- `Server:Urls`
+- `EventStore:Capacity`
+- `Diagnostics:LogRawEventPayload`
+
+## 主要接口
+
+- `POST /cdc`
+  - 接收 Debezium 推送的 CDC 事件
+- `GET /api/events?page=1&size=100`
+  - 返回分页事件列表
+- `GET /api/events/{id}`
+  - 返回单条事件详情
+- `GET /api/stats`
+  - 返回事件统计信息
+- `GET /health`
+  - 返回服务状态与关键检查项
 
 ## Debezium 配置
 
-确保 `debezium/application.properties` 中有：
+请确保 `debezium/application.properties` 中包含：
 
 ```properties
 debezium.sink.type=http
 debezium.sink.http.url=http://host.docker.internal:8889/cdc
 ```
 
-## 测试
+## 说明
 
-```sql
-INSERT INTO dbo.Product (Sku, Price, ProductName, CustomerId) 
-VALUES ('TEST-001', 99.99, '测试商品', 2);
-```
-
-控制台应显示：
-```
-[22:00:00] 📨 CDC Event Received
-  Table: dbo.Product
-  Op: 🟢 CREATE
-  Data:
-    Sku: TEST-001
-    Price: 99.99
-    ...
-```
+- 当前事件查询使用内存存储，适合本地调试与界面展示。
+- Redis Stream 消费请使用独立的 `CdcRedisConsumer` 服务。

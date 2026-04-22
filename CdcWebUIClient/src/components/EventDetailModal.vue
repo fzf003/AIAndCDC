@@ -6,28 +6,28 @@
     style="width: 800px; max-width: 90vw"
     @close="$emit('close')"
   >
-    <n-space vertical>
+    <n-space v-if="event" vertical>
       <n-descriptions bordered :column="2">
         <n-descriptions-item label="操作类型">
           <n-tag :type="getOpType(event.op)">
-            {{ getOpLabel(event.op) }}
+            {{ formatOperation(event.op) }}
           </n-tag>
         </n-descriptions-item>
         <n-descriptions-item label="表名">
-          {{ event.table }}
+          {{ event.sourceSchema }}.{{ event.sourceTable }}
         </n-descriptions-item>
-        <n-descriptions-item label="数据库">
-          {{ event.database }}
+        <n-descriptions-item label="接收时间">
+          {{ formatTime(event.receivedAt) }}
         </n-descriptions-item>
-        <n-descriptions-item label="时间">
-          {{ formatTime(event.timestamp) }}
+        <n-descriptions-item label="上游时间戳">
+          {{ event.tsMs || '-' }}
         </n-descriptions-item>
       </n-descriptions>
 
       <n-divider />
 
       <n-space justify="space-between" align="center">
-        <n-text strong>数据内容</n-text>
+        <n-text strong>事件 JSON</n-text>
         <n-button size="small" @click="handleCopy">
           <template #icon>
             <n-icon :component="CopyOutline" />
@@ -49,66 +49,65 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import {
-  NModal,
-  NCard,
-  NSpace,
+  NButton,
+  NCode,
   NDescriptions,
   NDescriptionsItem,
+  NDivider,
+  NIcon,
+  NModal,
+  NSpace,
   NTag,
   NText,
-  NDivider,
-  NButton,
-  NIcon,
-  NCode,
   useMessage,
 } from 'naive-ui';
 import { CopyOutline } from '@vicons/ionicons5';
-import type { CdcEvent, Operation } from '../types/cdc';
+import { formatOperation, getEventPayload, type CdcEvent, type Operation } from '../types/cdc';
 
 interface Props {
   show: boolean;
-  event: CdcEvent;
+  event: CdcEvent | null;
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{
+defineEmits<{
   (e: 'close'): void;
 }>();
 
 const message = useMessage();
 
 const formattedData = computed(() => {
+  if (!props.event) {
+    return '{}';
+  }
+
   try {
-    const data = JSON.parse(props.event.data);
-    return JSON.stringify(data, null, 2);
+    return JSON.stringify(
+      {
+        ...props.event,
+        payload: getEventPayload(props.event),
+      },
+      null,
+      2,
+    );
   } catch {
-    return props.event.data;
+    return props.event.rawJson;
   }
 });
 
-function getOpType(op: Operation): 'success' | 'warning' | 'error' | 'info' | 'default' {
+function getOpType(op: Operation): 'success' | 'warning' | 'error' | 'info' {
   const typeMap: Record<Operation, 'success' | 'warning' | 'error' | 'info'> = {
-    CREATE: 'success',
-    UPDATE: 'warning',
-    DELETE: 'error',
-    READ: 'info',
+    c: 'success',
+    u: 'warning',
+    d: 'error',
+    r: 'info',
   };
-  return typeMap[op] || 'default';
+
+  return typeMap[op];
 }
 
-function getOpLabel(op: Operation): string {
-  const labelMap: Record<Operation, string> = {
-    CREATE: '创建',
-    UPDATE: '更新',
-    DELETE: '删除',
-    READ: '读取',
-  };
-  return labelMap[op] || op;
-}
-
-function formatTime(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString('zh-CN');
+function formatTime(value: string): string {
+  return new Date(value).toLocaleString('zh-CN');
 }
 
 async function handleCopy() {

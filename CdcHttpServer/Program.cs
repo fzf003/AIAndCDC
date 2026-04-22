@@ -1,110 +1,260 @@
-using System.Text;
 using System.Text.Json;
-
-
-
-await RedisProcess.Start();
-
-Console.ReadKey();
+using CdcHttpServer.Models;
+using CdcHttpServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://*:8889");
+
+var serverUrls = builder.Configuration["Server:Urls"] ?? "http://*:8889";
+builder.WebHost.UseUrls(serverUrls);
+
+var storeCapacity = builder.Configuration.GetValue<int?>("EventStore:Capacity") ?? 1000;
+var logRawPayload = builder.Configuration.GetValue<bool?>("Diagnostics:LogRawEventPayload") ?? false;
+
+builder.Services.AddSingleton<IEventStore>(new InMemoryEventStore(storeCapacity));
+
 var app = builder.Build();
 
-Console.WriteLine("=== CDC HTTP Server ===");
-Console.WriteLine($"Listening on http://*:8889/cdc");
-Console.WriteLine($"Started at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-Console.WriteLine();
+app.Logger.LogInformation("CDC HTTP Server starting on {Urls}", serverUrls);
+app.Logger.LogInformation("Event store capacity: {Capacity}", storeCapacity);
 
-// 日志文件
-var logFile = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-    ".qclaw", "workspace", "projects", "CdcService", "CdcHttpServer", "cdc_events.log");
-File.AppendAllText(logFile, $"=== CDC Server Started {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===\n");
+var jsonOptions = new JsonSerializerOptions
+{
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+};
 
-  var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-
-       
-
-app.MapPost("/cdc", async (HttpContext ctx) =>
+app.MapPost("/cdc", async (HttpContext ctx, IEventStore eventStore, ILogger<Program> logger) =>
 {
     using var reader = new StreamReader(ctx.Request.Body);
     var json = await reader.ReadToEndAsync();
-    
-    // 记录完整日志
-    var logEntry = $"\n[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] 📨 CDC Event\n{json}\n";
-    File.AppendAllText(logFile, logEntry);
-    
-    Console.WriteLine();
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 📨 CDC Event Received");
-    Console.WriteLine($"  Full JSON saved to: {logFile}");
-    
+
+    if (string.IsNullOrWhiteSpace(json))
+    {
+        return CreateProblem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "请求体不能为空。",
+            detail: "POST /cdc 需要包含合法的 CDC JSON 负载。");
+    }
+
     try
     {
-        Console.WriteLine("  Parsing JSON...");
-
-
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-       // 3. 序列化 RootElement 并输出
-        string formattedJson = JsonSerializer.Serialize(doc.RootElement, options);
-        Console.WriteLine(formattedJson);
+        var schema = "?";
+        var table = "?";
+        var op = "?";
+        long tsMs = 0;
 
-
-        Console.WriteLine("  Parsed JSON:");
-        
         if (root.TryGetProperty("source", out var source))
         {
-            var schema = source.TryGetProperty("schema", out var s) ? s.GetString() : "?";
-            var table = source.TryGetProperty("table", out var t) ? t.GetString() : "?";
-            Console.WriteLine($"  Table: {schema}.{table}");
+            schema = source.TryGetProperty("schema", out var schemaProp)
+                ? schemaProp.GetString() ?? "?"
+                : "?";
+            table = source.TryGetProperty("table", out var tableProp)
+                ? tableProp.GetString() ?? "?"
+                : "?";
         }
-        
-        if (root.TryGetProperty("op", out var op))
+
+        if (root.TryGetProperty("op", out var opProp))
         {
-            Console.WriteLine($"  Op: {GetOpIcon(op.GetString())} {op.GetString()?.ToUpper()}");
+            op = opProp.GetString() ?? "?";
         }
-        
-        // 显示所有字段
-        var target = root.TryGetProperty("after", out var after) && after.ValueKind != JsonValueKind.Null 
-            ? after 
-            : (root.TryGetProperty("before", out var before) ? before : default);
-        
-        if (target.ValueKind != JsonValueKind.Undefined)
+
+        if (root.TryGetProperty("ts_ms", out var tsProp) && tsProp.TryGetInt64(out var parsedTsMs))
         {
-            Console.WriteLine($"  Data:");
-            foreach (var prop in target.EnumerateObject())
-            {
-                Console.WriteLine($"    {prop.Name}: {prop.Value}");
-            }
+            tsMs = parsedTsMs;
         }
+
+        object? beforeData = null;
+        object? afterData = null;
+
+        if (root.TryGetProperty("before", out var beforeProp) && beforeProp.ValueKind != JsonValueKind.Null)
+        {
+            beforeData = JsonSerializer.Deserialize<object>(beforeProp.GetRawText(), jsonOptions);
+        }
+
+        if (root.TryGetProperty("after", out var afterProp) && afterProp.ValueKind != JsonValueKind.Null)
+        {
+            afterData = JsonSerializer.Deserialize<object>(afterProp.GetRawText(), jsonOptions);
+        }
+
+        var cdcEvent = new CdcEvent
+        {
+            SourceSchema = schema,
+            SourceTable = table,
+            Op = op,
+            Before = beforeData,
+            After = afterData,
+            TsMs = tsMs,
+            RawJson = json,
+            ReceivedAt = DateTimeOffset.UtcNow
+        };
+
+        eventStore.Add(cdcEvent);
+
+        logger.LogInformation(
+            "CDC event stored. Schema={Schema}, Table={Table}, Op={Op}, Count={Count}",
+            schema,
+            table,
+            op,
+            eventStore.Count);
+
+        if (logRawPayload)
+        {
+            logger.LogInformation("Raw CDC payload: {Payload}", json);
+        }
+
+        return Results.Ok(new
+        {
+            message = "CDC event received.",
+            eventId = cdcEvent.Id
+        });
+    }
+    catch (JsonException ex)
+    {
+        logger.LogWarning(ex, "Invalid CDC payload received.");
+        return CreateProblem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "CDC 事件 JSON 无法解析。",
+            detail: ex.Message);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"  ⚠️ Parse Error: {ex.Message}");
+        logger.LogError(ex, "Failed to process CDC payload.");
+        return CreateProblem(
+            statusCode: StatusCodes.Status500InternalServerError,
+            title: "处理 CDC 事件失败。",
+            detail: ex.Message);
     }
-    
-    Console.WriteLine($"  Raw JSON ({json.Length} bytes):");
-    Console.WriteLine($"  {json[..Math.Min(300, json.Length)]}{(json.Length > 300 ? "..." : "")}");
-    
-    return Results.Ok();
 });
 
-app.MapGet("/", () => "CDC HTTP Server is running");
-app.MapGet("/health", () => "OK");
+app.MapGet("/api/events", (IEventStore eventStore, int? page, int? size, string? op, ILogger<Program> logger) =>
+{
+    try
+    {
+        var pageNumber = page ?? 1;
+        var pageSize = size ?? 100;
+
+        if (pageNumber < 1)
+        {
+            return CreateProblem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "分页参数不合法。",
+                detail: "page 必须大于或等于 1。");
+        }
+
+        if (pageSize < 1 || pageSize > 200)
+        {
+            return CreateProblem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "分页参数不合法。",
+                detail: "size 必须在 1 到 200 之间。");
+        }
+
+        var events = eventStore.GetAll();
+
+        if (!string.IsNullOrWhiteSpace(op))
+        {
+            events = events
+                .Where(x => string.Equals(x.Op, op, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        var total = events.Count;
+        var items = events
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return Results.Ok(new PagedResult<CdcEvent>
+        {
+            Items = items,
+            Total = total,
+            Page = pageNumber,
+            Size = pageSize
+        });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to query CDC events.");
+        return CreateProblem(
+            statusCode: StatusCodes.Status500InternalServerError,
+            title: "查询 CDC 事件失败。",
+            detail: ex.Message);
+    }
+});
+
+app.MapGet("/api/events/{id}", (string id, IEventStore eventStore, ILogger<Program> logger) =>
+{
+    try
+    {
+        var evt = eventStore.GetById(id);
+
+        return evt is null
+            ? CreateProblem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "未找到对应事件。",
+                detail: $"事件 ID '{id}' 不存在。")
+            : Results.Ok(evt);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to query CDC event {EventId}.", id);
+        return CreateProblem(
+            statusCode: StatusCodes.Status500InternalServerError,
+            title: "查询单条 CDC 事件失败。",
+            detail: ex.Message);
+    }
+});
+
+app.MapGet("/api/stats", (IEventStore eventStore, ILogger<Program> logger) =>
+{
+    try
+    {
+        return Results.Ok(eventStore.GetStats());
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to query CDC stats.");
+        return CreateProblem(
+            statusCode: StatusCodes.Status500InternalServerError,
+            title: "查询 CDC 统计失败。",
+            detail: ex.Message);
+    }
+});
+
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "CdcHttpServer",
+    message = "CDC HTTP server is running.",
+    recommendedClient = "CdcWebUIClient"
+}));
+
+app.MapGet("/health", (IConfiguration configuration) => Results.Ok(new
+{
+    status = "ok",
+    service = "CdcHttpServer",
+    checks = new
+    {
+        http = "ok",
+        eventStore = "ok",
+        redisConsumer = "externalized"
+    },
+    configuration = new
+    {
+        serverUrls = configuration["Server:Urls"] ?? "http://*:8889",
+        eventStoreCapacity = configuration.GetValue<int?>("EventStore:Capacity") ?? 1000
+    },
+    timestamp = DateTimeOffset.UtcNow
+}));
 
 app.Run();
 
-static string GetOpIcon(string? op) => op?.ToLower() switch
-{
-    "c" => "🟢 CREATE",
-    "u" => "🟡 UPDATE", 
-    "d" => "🔴 DELETE",
-    "r" => "🔵 READ",
-    _ => "⚪"
-};
+static IResult CreateProblem(int statusCode, string title, string detail) =>
+    Results.Problem(
+        statusCode: statusCode,
+        title: title,
+        detail: detail);
+
+public partial class Program;

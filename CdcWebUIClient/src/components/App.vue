@@ -7,7 +7,7 @@
             <n-space align="center" justify="space-between">
               <n-space align="center">
                 <n-icon :component="PulseOutline" size="28" color="#18a058" />
-                <n-h1 style="margin: 0; font-size: 20px">CDC Web UI</n-h1>
+                <n-h1 style="margin: 0; font-size: 20px">CDC 事件监控</n-h1>
               </n-space>
               <n-space>
                 <n-tag :type="connectionStatus.type">
@@ -55,34 +55,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
+  NButton,
   NConfigProvider,
-  NLoadingBarProvider,
-  NMessageProvider,
-  NLayout,
-  NLayoutHeader,
-  NLayoutContent,
-  NSpace,
   NGrid,
   NGridItem,
   NH1,
   NIcon,
-  NButton,
+  NLayout,
+  NLayoutContent,
+  NLayoutHeader,
+  NLoadingBarProvider,
+  NMessageProvider,
+  NSpace,
   NTag,
   darkTheme,
   type GlobalThemeOverrides,
 } from 'naive-ui';
-import { PulseOutline, SunnyOutline, MoonOutline } from '@vicons/ionicons5';
-import StatsPanel from './StatsPanel.vue';
-import FilterBar from './FilterBar.vue';
-import EventList from './EventList.vue';
+import { MoonOutline, PulseOutline, SunnyOutline } from '@vicons/ionicons5';
 import EventDetailModal from './EventDetailModal.vue';
+import EventList from './EventList.vue';
+import FilterBar from './FilterBar.vue';
+import StatsPanel from './StatsPanel.vue';
 import { useEvents } from '../composables/useEvents';
 import type { CdcEvent } from '../types/cdc';
 
-// 主题
 const isDark = ref(false);
+const showDetail = ref(false);
+const selectedEvent = ref<CdcEvent | null>(null);
+
 const theme = computed(() => (isDark.value ? darkTheme : null));
 const themeOverrides: GlobalThemeOverrides = {
   common: {
@@ -92,11 +94,6 @@ const themeOverrides: GlobalThemeOverrides = {
   },
 };
 
-function toggleTheme() {
-  isDark.value = !isDark.value;
-}
-
-// 事件管理
 const {
   stats,
   loading,
@@ -107,7 +104,6 @@ const {
   clearFilters,
 } = useEvents();
 
-// 连接状态
 const connectionStatus = computed(() => {
   if (error.value) {
     return { type: 'error' as const, text: '连接失败' };
@@ -118,15 +114,9 @@ const connectionStatus = computed(() => {
   return { type: 'success' as const, text: '已连接' };
 });
 
-// 详情弹窗
-const showDetail = ref(false);
-const selectedEvent = ref<CdcEvent>({
-  timestamp: '',
-  database: '',
-  table: '',
-  op: 'READ',
-  data: '',
-});
+function toggleTheme() {
+  isDark.value = !isDark.value;
+}
 
 function handleEventSelect(event: CdcEvent) {
   selectedEvent.value = event;
@@ -167,7 +157,7 @@ body {
   .header {
     padding: 12px 16px;
   }
-  
+
   .content {
     padding: 16px;
   }

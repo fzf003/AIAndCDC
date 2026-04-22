@@ -1,19 +1,19 @@
 <template>
   <n-card
-    :class="['event-card', `op-${event.op.toLowerCase()}`]"
+    :class="['event-card', `op-${event.op}`]"
     hoverable
     @click="$emit('click', event)"
   >
     <n-space align="center" justify="space-between">
       <n-space align="center">
         <n-tag :type="getOpType(event.op)" size="small">
-          {{ getOpLabel(event.op) }}
+          {{ formatOperation(event.op) }}
         </n-tag>
-        <n-text strong>{{ event.table }}</n-text>
-        <n-text type="info" class="database">{{ event.database }}</n-text>
+        <n-text strong>{{ event.sourceTable }}</n-text>
+        <n-text type="info" class="database">{{ event.sourceSchema }}</n-text>
       </n-space>
       <n-text type="info" class="timestamp">
-        {{ formatTime(event.timestamp) }}
+        {{ formatTime(event.receivedAt) }}
       </n-text>
     </n-space>
     <n-code
@@ -27,8 +27,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { NCard, NSpace, NTag, NText, NCode } from 'naive-ui';
-import type { CdcEvent, Operation } from '../types/cdc';
+import { NCard, NCode, NSpace, NTag, NText } from 'naive-ui';
+import { formatOperation, getEventPayload, type CdcEvent, type Operation } from '../types/cdc';
 
 interface Props {
   event: CdcEvent;
@@ -41,36 +41,26 @@ defineEmits<{
 
 const previewData = computed(() => {
   try {
-    const data = JSON.parse(props.event.data);
-    return JSON.stringify(data, null, 2).slice(0, 200) + '...';
+    const text = JSON.stringify(getEventPayload(props.event), null, 2);
+    return text.length > 200 ? `${text.slice(0, 200)}...` : text;
   } catch {
-    return props.event.data.slice(0, 200);
+    return props.event.rawJson.slice(0, 200);
   }
 });
 
-function getOpType(op: Operation): 'success' | 'warning' | 'error' | 'info' | 'default' {
+function getOpType(op: Operation): 'success' | 'warning' | 'error' | 'info' {
   const typeMap: Record<Operation, 'success' | 'warning' | 'error' | 'info'> = {
-    CREATE: 'success',
-    UPDATE: 'warning',
-    DELETE: 'error',
-    READ: 'info',
+    c: 'success',
+    u: 'warning',
+    d: 'error',
+    r: 'info',
   };
-  return typeMap[op] || 'default';
+
+  return typeMap[op];
 }
 
-function getOpLabel(op: Operation): string {
-  const labelMap: Record<Operation, string> = {
-    CREATE: '创建',
-    UPDATE: '更新',
-    DELETE: '删除',
-    READ: '读取',
-  };
-  return labelMap[op] || op;
-}
-
-function formatTime(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('zh-CN');
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString('zh-CN');
 }
 </script>
 
@@ -85,19 +75,19 @@ function formatTime(timestamp: string): string {
   transform: translateX(4px);
 }
 
-.op-create {
+.op-c {
   border-left: 4px solid #18a058;
 }
 
-.op-update {
+.op-u {
   border-left: 4px solid #f0a020;
 }
 
-.op-delete {
+.op-d {
   border-left: 4px solid #d03050;
 }
 
-.op-read {
+.op-r {
   border-left: 4px solid #2080f0;
 }
 

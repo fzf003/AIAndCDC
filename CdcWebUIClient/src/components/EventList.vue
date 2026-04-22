@@ -1,10 +1,10 @@
 <template>
-  <n-card title="📋 事件列表" class="event-list">
+  <n-card title="事件列表" class="event-list">
     <n-empty v-if="events.length === 0" description="暂无事件" />
     <n-scrollbar v-else style="max-height: 600px">
       <EventCard
         v-for="event in paginatedEvents"
-        :key="`${event.timestamp}-${event.table}`"
+        :key="event.id"
         :event="event"
         @click="handleEventClick"
       />
@@ -20,8 +20,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { NCard, NEmpty, NScrollbar, NPagination } from 'naive-ui';
+import { computed, ref, watch } from 'vue';
+import { NCard, NEmpty, NPagination, NScrollbar } from 'naive-ui';
 import EventCard from './EventCard.vue';
 import type { CdcEvent } from '../types/cdc';
 
@@ -41,14 +41,20 @@ const emit = defineEmits<{
 const currentPage = ref(1);
 const pageSize = ref(20);
 
-// 分页后的事件列表
 const paginatedEvents = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return props.events.slice(start, end);
+  return props.events.slice(start, start + pageSize.value);
 });
 
 const showPagination = computed(() => props.events.length > pageSize.value);
+
+watch(
+  () => props.events,
+  () => {
+    currentPage.value = 1;
+  },
+  { deep: true },
+);
 
 function handleEventClick(event: CdcEvent) {
   emit('select', event);
