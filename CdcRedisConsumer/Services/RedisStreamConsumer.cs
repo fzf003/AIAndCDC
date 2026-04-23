@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CdcRedisConsumer;
 using CdcRedisConsumer.Handlers;
 using StackExchange.Redis;
 
@@ -30,15 +31,15 @@ public class RedisStreamConsumer : BackgroundService
             PropertyNameCaseInsensitive = true
         };
 
-        _streamKey = config["Redis:StreamKey"]
+        _streamKey = config.ResolveEnv("Redis:StreamKey")
             ?? throw new InvalidOperationException("Missing config: Redis:StreamKey");
-        _consumerGroup = config["Redis:ConsumerGroup"] ?? "cdc-consumers";
-        _consumerName = config["Redis:ConsumerName"] ?? $"consumer-{Environment.MachineName}";
+        _consumerGroup = config.ResolveEnv("Redis:ConsumerGroup") ?? "cdc-consumers";
+        _consumerName = config.ResolveEnv("Redis:ConsumerName") ?? $"consumer-{Environment.MachineName}";
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var redisUrl = _config["Redis:Url"]
+        var redisUrl = _config.ResolveEnv("Redis:Url")
             ?? throw new InvalidOperationException("Missing config: Redis:Url");
 
         _logger.LogInformation("CDC Redis consumer starting.");
